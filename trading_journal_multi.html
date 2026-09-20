@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trading Journal</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#000;color:#fff;font-family:Arial,sans-serif}
+.wrap{width:min(920px,94vw);margin:28px auto 60px}
+h1{text-align:center;font-size:clamp(40px,7vw,72px);line-height:1.05;margin:0 0 38px}
+.grid3,.grid2,.bottom3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid2{grid-template-columns:1fr 1fr;margin-top:14px}.main{display:grid;grid-template-columns:215px 1fr;gap:14px;margin-top:14px}
+.stack{display:flex;flex-direction:column;gap:14px}.box{border:3px solid #fff;padding:10px;min-height:76px}
+label{display:block;font-size:16px;font-weight:700;margin-bottom:8px}
+input,select,textarea{width:100%;background:#000;color:#fff;border:0;outline:0;font:inherit;font-size:17px}
+textarea{resize:vertical;min-height:90px}.strategy{min-height:300px}.strategy textarea{min-height:95px}
+.upload{height:175px;border:2px dashed #777;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer;overflow:hidden;position:relative}
+.upload input{display:none}.preview{width:100%;height:100%;object-fit:contain;display:none}.uploadtext{color:#aaa}
+.full{margin-top:14px}.notes textarea{min-height:220px}
+button{border:0;padding:12px 18px;font-weight:bold;cursor:pointer;background:#fff;color:#000}
+button.dark{background:#222;color:#fff;border:1px solid #777}.actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+.status{text-align:right;color:#999;font-size:13px;margin-top:9px}
+.history{margin-top:40px}.history h2{font-size:26px;margin:0 0 15px}
+.trade-card{border:2px solid #fff;padding:14px;margin-bottom:12px}
+.trade-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-weight:bold}
+.trade-meta{color:#bbb;font-size:14px;margin:8px 0}.thumb{max-width:180px;max-height:120px;object-fit:contain;border:1px solid #555;margin-top:8px}
+.card-buttons{display:flex;gap:8px;margin-top:12px}.empty{color:#777;border:2px dashed #555;padding:20px;text-align:center}
+@media(max-width:650px){.grid3,.grid2,.bottom3,.main{grid-template-columns:1fr}.wrap{width:92vw}.actions{justify-content:stretch}.actions button{flex:1}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>TRADING<br>JOURNAL</h1>
+
+<div class="grid3">
+<div class="box"><label>DATE</label><input id="date" type="date"></div>
+<div class="box"><label>TIME OPENED</label><input id="opened" type="time"></div>
+<div class="box"><label>TIME CLOSED</label><input id="closed" type="time"></div>
+</div>
+
+<div class="grid2">
+<div class="box"><label>TRADING</label><input id="trading" placeholder="EURUSD"></div>
+<div class="box"><label>BUY / SELL</label><select id="side"><option value="">Pilih</option><option>BUY</option><option>SELL</option></select></div>
+</div>
+
+<div class="main">
+<div class="stack">
+<div class="box"><label>TRADE SIZE</label><input id="size" placeholder="0.01"></div>
+<div class="box"><label>TARGET PRICE</label><input id="target"></div>
+<div class="box"><label>STOP LOSS</label><input id="sl"></div>
+</div>
+
+<div class="box strategy">
+<label>STRATEGY</label>
+<textarea id="strategy" placeholder="Tulis alasan entry / strategi..."></textarea>
+<label class="upload" for="shot"><input id="shot" type="file" accept="image/*"><span class="uploadtext" id="uploadtext">📷 Klik untuk upload screenshot<br>dari galeri</span><img id="preview" class="preview"></label>
+</div>
+</div>
+
+<div class="bottom3">
+<div class="box"><label>OPEN PRICE</label><input id="open"></div>
+<div class="box"><label>CLOSE PRICE</label><input id="close"></div>
+<div class="box"><label>PIPS</label><input id="pips"></div>
+</div>
+
+<div class="box full"><label>NET PROFIT / LOSS</label><input id="pl" placeholder="+$10 / -$5"></div>
+<div class="box full notes"><label>NOTES</label><textarea id="notes" placeholder="Catatan setelah trade..."></textarea></div>
+
+<div class="actions">
+<button class="dark" onclick="clearForm()">FORM BARU</button>
+<button onclick="saveTrade()">SIMPAN TRADE</button>
+</div>
+<div class="status" id="status">Trade tersimpan di browser ini.</div>
+
+<div class="history">
+<h2>RIWAYAT TRADING</h2>
+<div id="history"></div>
+</div>
+</div>
+
+<script>
+const fields=['date','opened','closed','trading','side','size','target','sl','strategy','open','close','pips','pl','notes'];
+let imageData='';
+let trades=JSON.parse(localStorage.getItem('trading_journal_trades')||'[]');
+
+function $(id){return document.getElementById(id)}
+function clearForm(){
+ fields.forEach(x=>$(x).value=''); imageData=''; $('shot').value='';
+ $('preview').style.display='none'; $('uploadtext').style.display='block';
+ $('status').textContent='Form baru.';
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+function readForm(){
+ let t={}; fields.forEach(x=>t[x]=$(x).value); t.image=imageData; t.id=Date.now(); return t;
+}
+function saveTrade(){
+ let t=readForm();
+ if(!t.trading && !t.open && !t.close){$('status').textContent='Isi minimal pair/instrumen atau harga trade dulu.';return}
+ trades.unshift(t);
+ localStorage.setItem('trading_journal_trades',JSON.stringify(trades));
+ render(); clearForm();
+ $('status').textContent='Trade berhasil disimpan.';
+}
+function deleteTrade(id){
+ if(!confirm('Hapus trade ini?'))return;
+ trades=trades.filter(t=>t.id!==id);
+ localStorage.setItem('trading_journal_trades',JSON.stringify(trades));render();
+}
+function editTrade(id){
+ let t=trades.find(x=>x.id===id); if(!t)return;
+ fields.forEach(x=>$(x).value=t[x]||''); imageData=t.image||'';
+ if(imageData){$('preview').src=imageData;$('preview').style.display='block';$('uploadtext').style.display='none'}
+ trades=trades.filter(x=>x.id!==id);
+ localStorage.setItem('trading_journal_trades',JSON.stringify(trades));
+ render();window.scrollTo({top:0,behavior:'smooth'});
+}
+function render(){
+ if(!trades.length){$('history').innerHTML='<div class="empty">Belum ada trade. Simpan trade pertama kamu di atas.</div>';return}
+ $('history').innerHTML=trades.map((t,i)=>`
+ <div class="trade-card">
+  <div class="trade-head"><span>#${trades.length-i} — ${esc(t.trading||'Trade')}</span><span>${esc(t.side||'')} ${esc(t.pl||'')}</span></div>
+  <div class="trade-meta">${esc(t.date||'')} • ${esc(t.opened||'')} → ${esc(t.closed||'')} • Size: ${esc(t.size||'-')} • Pips: ${esc(t.pips||'-')}</div>
+  ${t.strategy?'<div><b>Strategy:</b> '+esc(t.strategy)+'</div>':''}
+  ${t.notes?'<div style="margin-top:7px"><b>Notes:</b> '+esc(t.notes)+'</div>':''}
+  ${t.image?'<img class="thumb" src="'+t.image+'">':''}
+  <div class="card-buttons"><button class="dark" onclick="editTrade(${t.id})">EDIT</button><button class="dark" onclick="deleteTrade(${t.id})">HAPUS</button></div>
+ </div>`).join('');
+}
+function esc(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+$('shot').addEventListener('change',e=>{
+ const f=e.target.files[0];if(!f)return;
+ const r=new FileReader();r.onload=()=>{imageData=r.result;$('preview').src=imageData;$('preview').style.display='block';$('uploadtext').style.display='none'};r.readAsDataURL(f);
+});
+render();
+</script>
+</body>
+</html>
